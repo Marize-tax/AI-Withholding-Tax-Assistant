@@ -6,18 +6,6 @@ const LAW = {
   service:{rate:3,clause:"ท.ป.4/2528 ข้อ 12/1",url:"https://www.rd.go.th/3479.html",why:"บริการอื่นตามข้อ 12/1 ซึ่งไม่ใช่ประเภทที่ยกเว้นหรือมีข้อกำหนดเฉพาะ"},
   transport:{rate:1,clause:"ท.ป.4/2528 ข้อ 12/4",url:"https://www.rd.go.th/3479.html",why:"ค่าขนส่งที่ไม่ใช่ค่าโดยสารสำหรับการขนส่งสาธารณะ"}
 };
-const CASES = [
- {title:"ค่าเช่าสำนักงาน",amount:30000,type:"rent",desc:"ค่าเช่าสำนักงาน 30,000 บาท"},
- {title:"ค่าเช่าจากบุคคลธรรมดา",amount:12000,type:"rent",desc:"ค่าเช่าจากบุคคลธรรมดา 12,000 บาท"},
- {title:"ค่าบริการทำความสะอาด",amount:20000,type:"service",vat:7,desc:"ค่าบริการทำความสะอาด 20,000 บาท + VAT 7%"},
- {title:"ค่าจ้างทำของ",amount:15000,type:"contract",desc:"ค่าจ้างทำของ 15,000 บาท"},
- {title:"ค่าโฆษณา",amount:25000,type:"advertising",vat:7,desc:"ค่าโฆษณา 25,000 บาท + VAT 7%"},
- {title:"ค่าขนส่งสินค้า",amount:18000,type:"transport",desc:"ค่าขนส่งสินค้า 18,000 บาท"},
- {title:"ซื้อสินค้าและค่าจัดส่ง",amount:42000,type:"goods",desc:"ซื้อสินค้า 40,000 บาท + ค่าจัดส่ง 2,000 บาท"},
- {title:"ค่าห้องพักโรงแรม",amount:8000,type:"hotel",desc:"ค่าห้องพักโรงแรม 8,000 บาท"},
- {title:"ค่าอาหารประชุมร้านอาหาร",amount:3500,type:"restaurant",desc:"ค่าอาหารประชุมร้านอาหาร 3,500 บาท"},
- {title:"ค่าดำเนินการ",amount:10000,type:"unknown",desc:"รายการค่าดำเนินการ 10,000 บาท (ข้อมูลไม่ครบ)"}
-];
 const $ = id => document.getElementById(id);
 const money = n => new Intl.NumberFormat("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
 const getHistory = () => {try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return []}};
@@ -26,7 +14,7 @@ function toast(message){const el=$("toast");el.textContent=message;el.classList.
 function showPage(name){
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${name}`));
  document.querySelectorAll(".nav-link").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
- const titles={dashboard:"Dashboard",analyze:"วิเคราะห์ภาษี",history:"ประวัติการคำนวณ",cases:"กรณีศึกษาทดสอบ 10 กรณี",knowledge:"ฐานความรู้ทางภาษี",about:"เกี่ยวกับระบบ"};
+ const titles={dashboard:"Dashboard",analyze:"วิเคราะห์ภาษี",history:"ประวัติการคำนวณ",knowledge:"ฐานความรู้ทางภาษี",about:"เกี่ยวกับระบบ"};
  $("pageTitle").textContent=titles[name]||"Dashboard";$("sidebar").classList.remove("open");
  if(name==="dashboard")renderDashboard();if(name==="history")renderHistory();
 }
@@ -95,10 +83,4 @@ function renderDashboard(){const h=getHistory();$("statTotal").textContent=h.len
 function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> <button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
 $("historyTable").addEventListener("click",e=>{const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");if(view){const item=getHistory().find(x=>x.id===Number(view.dataset.view));if(item){showPage("history");const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}if(del){saveHistory(getHistory().filter(x=>x.id!==Number(del.dataset.delete)));renderHistory();renderDashboard();toast("ลบรายการแล้ว");}});
 $("clearHistory").addEventListener("click",()=>{if(confirm("ต้องการลบประวัติการคำนวณทั้งหมดหรือไม่?")){saveHistory([]);renderHistory();renderDashboard();toast("ลบประวัติทั้งหมดแล้ว");}});
-function renderCases(){$("caseGrid").innerHTML=CASES.map((c,i)=>`<article class="case-card"><div class="case-number">${String(i+1).padStart(2,"0")}</div><div class="case-info"><b>${escapeHTML(c.title)}</b><small>${escapeHTML(c.desc)}</small></div><button class="btn btn-outline btn-sm" data-case="${i}">วิเคราะห์</button></article>`).join("");}
-$("caseGrid").addEventListener("click",e=>{const b=e.target.closest("[data-case]");if(!b)return;const c=CASES[Number(b.dataset.case)];const data={payerName:"(โจทย์ไม่ได้ระบุ)",payerType:"",payeeName:"(โจทย์ไม่ได้ระบุ)",payeeType:"",residence:"",description:c.desc,type:c.type,amount:c.amount,vatRate:c.vat||0,paymentDate:new Date().toISOString().slice(0,10),special:""};let result;
- if([7,8].includes(Number(b.dataset.case))){result=analyze({...data,payerName:"ผู้จ่ายตามโจทย์",payerType:"juristic",payeeName:"ผู้รับตามโจทย์",payeeType:"juristic",residence:"thai"});result.warnings.unshift("กรณีศึกษาระบุเพียงประเภทและยอดเงิน ไม่ได้ระบุสถานะคู่ค้า ผลนี้เป็นการสาธิตโดยตั้งสมมติฐานว่าผู้จ่ายเป็นนิติบุคคลและผู้รับอยู่ในไทย");result.status="review";result.statusText="ตัวอย่างเบื้องต้น — ต้องยืนยันข้อมูลคู่ค้า";result.rate=null;result.tax=null;result.net=null;result.form="ต้องตรวจสอบข้อมูลผู้รับ";result.reason.unshift("ข้อมูลโจทย์ไม่ระบุสถานะผู้จ่ายและผู้รับ ระบบจึงไม่ยืนยันผลทางกฎหมาย");}
- else result=analyze(data);
- renderResult(result,$("caseResult"),false);$("caseResult").scrollIntoView({behavior:"smooth",block:"start"});
-});
-renderCases();renderDashboard();
+renderDashboard();

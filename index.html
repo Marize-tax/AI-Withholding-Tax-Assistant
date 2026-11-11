@@ -19,7 +19,6 @@
       <button class="nav-link active" data-page="dashboard"><span>▦</span> Dashboard</button>
       <button class="nav-link" data-page="analyze"><span>⌕</span> วิเคราะห์ภาษี</button>
       <button class="nav-link" data-page="history"><span>◷</span> ประวัติการคำนวณ</button>
-      <button class="nav-link" data-page="cases"><span>▤</span> กรณีศึกษาทดสอบ 10 กรณี</button>
       <button class="nav-link" data-page="knowledge"><span>▣</span> ฐานความรู้ทางภาษี</button>
       <button class="nav-link" data-page="about"><span>ⓘ</span> เกี่ยวกับระบบ</button>
     </nav>
@@ -47,7 +46,6 @@
       <div class="content-grid">
         <article class="panel"><div class="panel-heading"><div><h3>เริ่มต้นใช้งาน</h3><p>เลือกเครื่องมือที่ต้องการ</p></div></div><div class="quick-actions">
           <button class="quick-action" data-go="analyze"><span class="quick-icon">⌕</span><span><b>วิเคราะห์ภาษี</b><small>กรอกข้อมูลธุรกรรมใหม่</small></span><span class="arrow">→</span></button>
-          <button class="quick-action" data-go="cases"><span class="quick-icon">▤</span><span><b>ทดสอบกรณีศึกษา</b><small>ทดลองทั้ง 10 สถานการณ์</small></span><span class="arrow">→</span></button>
           <button class="quick-action" data-go="knowledge"><span class="quick-icon">▣</span><span><b>ศึกษาฐานความรู้</b><small>ตรวจสอบแหล่งกฎหมาย</small></span><span class="arrow">→</span></button>
         </div></article>
         <article class="panel"><div class="panel-heading"><div><h3>ข้อควรทราบ</h3><p>ก่อนใช้ผลคำนวณ</p></div><span class="pill warning">สำคัญ</span></div><ul class="notice-list"><li>ผลลัพธ์เป็นเครื่องมือช่วยศึกษา ไม่ใช่คำวินิจฉัยทางภาษี</li><li>อัตราภาษีขึ้นกับประเภทเงินได้ สถานะผู้จ่าย/ผู้รับ และเงื่อนไขธุรกรรม</li><li>ระบบจะไม่คาดเดาเมื่อข้อมูลไม่ครบหรือไม่เข้าเงื่อนไขกฎที่บันทึกไว้</li></ul></article>
@@ -84,12 +82,6 @@
     <section class="page" id="page-history">
       <div class="section-intro"><div><h2>ประวัติการคำนวณ</h2><p>ข้อมูลจัดเก็บใน LocalStorage ของ Browser ที่ใช้งาน</p></div><button class="btn btn-danger-outline btn-sm" id="clearHistory">ลบประวัติทั้งหมด</button></div>
       <article class="panel"><div id="historyTable"></div></article>
-    </section>
-
-    <section class="page" id="page-cases">
-      <div class="section-intro"><div><h2>กรณีศึกษาทดสอบ 10 กรณี</h2><p>เลือกสถานการณ์เพื่อดูแนวทางวิเคราะห์ ระบบจะไม่เติมข้อมูลที่โจทย์ไม่ได้ระบุ</p></div><span class="pill info">AC317</span></div>
-      <div class="case-grid" id="caseGrid"></div>
-      <div id="caseResult" class="result-area"></div>
     </section>
 
     <section class="page" id="page-knowledge">
