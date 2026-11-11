@@ -106,13 +106,15 @@
 
     <section class="page" id="page-about">
       <div class="section-intro"><div><h2>เกี่ยวกับระบบ</h2><p>AI Withholding Tax Assistant</p></div><span class="pill info">Prototype v1.0</span></div>
-      <article class="panel about-panel"><div class="about-logo">฿</div><h2>AI Withholding Tax Assistant</h2><p>เว็บแอปพลิเคชันต้นแบบเพื่อช่วยศึกษาและฝึกวิเคราะห์ภาษีเงินได้หัก ณ ที่จ่าย ตามหัวข้อวิชา AC317 การบัญชีภาษีอากร</p><div class="about-features"><div><b>Frontend</b><span>HTML5 / CSS3 / Vanilla JavaScript</span></div><div><b>Storage</b><span>LocalStorage ใน Browser</span></div><div><b>Responsive</b><span>Desktop / Tablet / Mobile</span></div><div><b>ข้อจำกัด</b><span>ไม่ใช่ระบบให้คำปรึกษาภาษีอย่างเป็นทางการ และไม่เชื่อมต่อ AI API หรือฐานข้อมูลภายนอก</span></div></div><div class="disclaimer"><b>คำเตือน</b><p>ผู้ใช้งานต้องตรวจสอบกฎหมาย คำสั่งกรมสรรพากร และข้อเท็จจริงของธุรกรรมก่อนนำผลไปใช้จริง หากไม่แน่ใจควรปรึกษาผู้เชี่ยวชาญหรือกรมสรรพากร โทร. 1161</p></div></article>
+      <article class="panel about-panel"><div class="about-logo">฿</div><h2>AI Withholding Tax Assistant</h2><p>เว็บแอปพลิเคชันต้นแบบเพื่อช่วยศึกษาและฝึกวิเคราะห์ภาษีเงินได้หัก ณ ที่จ่าย ตามหัวข้อวิชา AC317 การบัญชีภาษีอากร</p><div class="about-features"><div><b>Frontend</b><span>HTML5 / CSS3 / Vanilla JavaScript</span></div><div><b>Storage</b><span>LocalStorage และ Cloud Firestore (เมื่อตั้งค่า Firebase)</span></div><div><b>Responsive</b><span>Desktop / Tablet / Mobile</span></div><div><b>ข้อจำกัด</b><span>ไม่ใช่ระบบให้คำปรึกษาภาษีอย่างเป็นทางการ และไม่เชื่อมต่อ AI API (สามารถเชื่อม Cloud Firestore เพื่อเก็บประวัติได้)</span></div></div><div class="disclaimer"><b>คำเตือน</b><p>ผู้ใช้งานต้องตรวจสอบกฎหมาย คำสั่งกรมสรรพากร และข้อเท็จจริงของธุรกรรมก่อนนำผลไปใช้จริง หากไม่แน่ใจควรปรึกษาผู้เชี่ยวชาญหรือกรมสรรพากร โทร. 1161</p></div></article>
     </section>
 
     <footer class="footer">© 2026 AI Withholding Tax Assistant · ระบบต้นแบบเพื่อการศึกษา AC317</footer>
   </main>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<div class="firebase-status" id="firebaseStatus" role="status">การจัดเก็บ: ภายในเครื่อง (ยังไม่ตั้งค่า Firebase)</div>
 <script src="script.js"></script>
+<script type="module" src="firebase.js"></script>
 </body>
 </html>

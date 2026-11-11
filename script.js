@@ -51,6 +51,19 @@ function analyze(data){
  const rate=rule.rate, tax=base.base*rate/100, form=data.payeeType==="individual"?"ภ.ง.ด.3":"ภ.ง.ด.53";
  return {...base,status:"ok",statusText:"เข้าเงื่อนไขคำนวณตามกฎที่ระบบอ้างอิง",rate,tax,net:base.gross-tax,form,reason:[rule.why,`ผู้จ่ายเป็นบริษัท/นิติบุคคล และผู้รับเป็น${data.payeeType==="individual"?"บุคคลธรรมดา":"นิติบุคคล"}ที่ระบุว่าประกอบกิจการ/มีถิ่นที่อยู่ในประเทศไทย`,`คำนวณจากฐานเงินได้ก่อน VAT ตามข้อมูลที่กรอก`],warnings:["ตรวจสอบสัญญา ใบแจ้งหนี้ และสถานะผู้รับเงินก่อนนำไปใช้จริง","อัตราที่แสดงเป็นอัตราตามหลักเกณฑ์ทั่วไปที่ระบบบันทึก ไม่ครอบคลุมกรณีพิเศษหรืออนุสัญญาภาษีซ้อน"],law:rule};
 }
+function reviewChecklist(result){
+ if(result.status!=="review")return "";
+ const d=result;
+ const items=["ตรวจสอบสัญญา ใบแจ้งหนี้ และหลักฐานการจ่ายเงิน", "ยืนยันลักษณะงาน/สินค้าและประเภทเงินได้ที่แท้จริง"];
+ if(d.residence!=="thai"||d.payeeType==="foreign")items.push("ตรวจสอบประเทศถิ่นที่อยู่ สถานประกอบการถาวร และสิทธิประโยชน์ตามอนุสัญญาภาษีซ้อน");
+ if(d.payerType!=="juristic")items.push("ตรวจสอบประเภทและหน้าที่หักภาษีของผู้จ่ายเงิน");
+ if(d.payeeType==="foundation")items.push("ตรวจสอบหนังสือรับรองและสถานะภาษีของมูลนิธิ/สมาคม");
+ if(d.type==="other"||d.type==="unknown")items.push("ระบุรายละเอียดบริการ ผลงาน สัญญา และการคิดค่าตอบแทนให้ชัดเจน");
+ if(d.type==="transport")items.push("ระบุว่าเป็นค่าขนส่งสินค้าหรือค่าโดยสารสาธารณะ และใครเป็นผู้ให้บริการ");
+ if(d.amount<1000)items.push("ตรวจสอบยอดรวมตามสัญญา ไม่ใช่เฉพาะยอดจ่ายครั้งเดียว");
+ if(d.type==="service")items.push("ยืนยันว่าไม่ใช่บริการโรงแรม ภัตตาคาร หรือบริการที่มีกฎเฉพาะ");
+ return `<section class="review-checklist"><h4>ข้อมูลที่ต้องตรวจสอบเพิ่มเติม</h4><p>ระบบยังไม่สรุปอัตราภาษี เพราะมีเงื่อนไขที่ต้องยืนยันก่อน โปรดตรวจสอบรายการต่อไปนี้</p><ul>${items.map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul><p><b>ขั้นตอนถัดไป:</b> ตรวจเอกสารและแก้ไขข้อมูลในแบบฟอร์มให้ตรงกับข้อเท็จจริง หากยังไม่แน่ใจให้สอบถามผู้เชี่ยวชาญหรือกรมสรรพากร 1161</p></section>`;
+}
 function renderResult(result,container,save=false){
  const statusClass=result.status==="ok"?"status-ok":result.status==="no"?"status-no":"status-review";
  const rate=result.rate===null?"—":`${result.rate}%`;
@@ -69,9 +82,10 @@ function renderResult(result,container,save=false){
  <div class="metric"><span>แบบนำส่งภาษี</span><strong>${escapeHTML(result.form)}</strong></div>
  <div class="metric"><span>ยอดรวมก่อนหักภาษี</span><strong>฿${money(result.gross)}</strong></div></div>
  <div class="result-detail"><div class="detail-box"><h4>เหตุผลในการวิเคราะห์</h4><ul>${(result.reason||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul><p><b>แหล่งอ้างอิง:</b> ${law}</p></div><div class="detail-box"><h4>สูตรและข้อควรระวัง</h4><div class="formula">VAT = ฐานเงิน × VAT%<br>ภาษีหัก = ฐานเงินก่อน VAT × อัตราหัก<br>ยอดสุทธิ = ฐานเงิน + VAT − ภาษีหัก</div><ul>${(result.warnings||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul></div></div>
+ ${reviewChecklist(result)}
  <p class="muted small">ผลลัพธ์นี้เป็นการประมวลผลตามข้อมูลที่ผู้ใช้กรอกและกฎที่ระบุในระบบต้นแบบเท่านั้น โปรดตรวจสอบกฎหมายฉบับปัจจุบันก่อนใช้งานจริง</p>
  ${save?'<div class="form-actions"><button class="btn btn-outline" id="saveResult">บันทึกผลในประวัติ</button></div>':""}</article>`;
- if(save){$("saveResult").addEventListener("click",()=>{const h=getHistory();h.unshift({...result,id:Date.now(),createdAt:new Date().toISOString()});saveHistory(h);toast("บันทึกผลการวิเคราะห์แล้ว");renderDashboard();$("saveResult").disabled=true;$("saveResult").textContent="บันทึกแล้ว";});}
+ if(save){$("saveResult").addEventListener("click",()=>{const h=getHistory();h.unshift({...result,id:Date.now(),createdAt:new Date().toISOString()});saveHistory(h);window.firebaseHistorySync?.(h);toast("บันทึกผลการวิเคราะห์แล้ว");renderDashboard();$("saveResult").disabled=true;$("saveResult").textContent="บันทึกแล้ว";});}
 }
 function typeName(t){return ({rent:"ค่าเช่า",service:"ค่าบริการ",contract:"ค่าจ้างทำของ",advertising:"ค่าโฆษณา",transport:"ค่าขนส่ง",goods:"การซื้อสินค้า",hotel:"ค่าบริการโรงแรม",restaurant:"ค่าภัตตาคาร",other:"รายการอื่น",unknown:"ต้องตรวจสอบเพิ่มเติม"})[t]||"ไม่ระบุ";}
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -81,6 +95,8 @@ $("taxForm").addEventListener("reset",()=>setTimeout(()=>{$("analysisResult").in
 
 function renderDashboard(){const h=getHistory();$("statTotal").textContent=h.length;$("statConfirmed").textContent=h.filter(x=>x.status==="ok"||x.status==="no").length;$("statReview").textContent=h.filter(x=>x.status==="review").length;$("statTax").textContent="฿"+money(h.reduce((s,x)=>s+(x.tax||0),0));const recent=h.slice(0,5);$("recentList").innerHTML=recent.length?`<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>รายการ</th><th>สถานะ</th><th>ภาษี</th></tr></thead><tbody>${recent.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleDateString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ยังไม่มีประวัติการวิเคราะห์ เริ่มต้นได้จากเมนู “วิเคราะห์ภาษี”</div>';}
 function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> <button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
-$("historyTable").addEventListener("click",e=>{const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");if(view){const item=getHistory().find(x=>x.id===Number(view.dataset.view));if(item){showPage("history");const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}if(del){saveHistory(getHistory().filter(x=>x.id!==Number(del.dataset.delete)));renderHistory();renderDashboard();toast("ลบรายการแล้ว");}});
-$("clearHistory").addEventListener("click",()=>{if(confirm("ต้องการลบประวัติการคำนวณทั้งหมดหรือไม่?")){saveHistory([]);renderHistory();renderDashboard();toast("ลบประวัติทั้งหมดแล้ว");}});
+$("historyTable").addEventListener("click",e=>{const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");if(view){const item=getHistory().find(x=>x.id===Number(view.dataset.view));if(item){showPage("history");const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}if(del){saveHistory(getHistory().filter(x=>x.id!==Number(del.dataset.delete)));window.firebaseHistorySync?.(getHistory());renderHistory();renderDashboard();toast("ลบรายการแล้ว");}});
+$("clearHistory").addEventListener("click",()=>{if(confirm("ต้องการลบประวัติการคำนวณทั้งหมดหรือไม่?")){saveHistory([]);window.firebaseHistorySync?.([]);renderHistory();renderDashboard();toast("ลบประวัติทั้งหมดแล้ว");}});
 renderDashboard();
+
+window.refreshTaxViews=()=>{renderDashboard();renderHistory();};
