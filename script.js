@@ -55,6 +55,15 @@ function analyze(data){
  const rate=rule.rate, tax=base.base*rate/100, form=data.payeeType==="individual"?"ภ.ง.ด.3":"ภ.ง.ด.53";
  return {...base,status:"ok",statusText:"เข้าเงื่อนไขคำนวณตามกฎที่ระบบอ้างอิง",rate,tax,net:base.gross-tax,form,reason:[rule.why,`ผู้จ่ายเป็นบริษัท/นิติบุคคล และผู้รับเป็น${data.payeeType==="individual"?"บุคคลธรรมดา":"นิติบุคคล"}ที่ระบุว่าประกอบกิจการ/มีถิ่นที่อยู่ในประเทศไทย`,`คำนวณจากฐานเงินได้ก่อน VAT ตามข้อมูลที่กรอก`],warnings:["ตรวจสอบสัญญา ใบแจ้งหนี้ และสถานะผู้รับเงินก่อนนำไปใช้จริง","อัตราที่แสดงเป็นอัตราตามหลักเกณฑ์ทั่วไปที่ระบบบันทึก ไม่ครอบคลุมกรณีพิเศษหรืออนุสัญญาภาษีซ้อน"],law:rule};
 }
+function assessSection40(result){
+ if(["juristic","foreign","foundation"].includes(result.payeeType))return {label:"ไม่ใช้มาตรา 40 โดยตรง",note:"มาตรา 40 เป็นหมวดเงินได้พึงประเมินสำหรับภาษีเงินได้บุคคลธรรมดา ผู้รับเป็นนิติบุคคลต้องพิจารณากฎหมายภาษีเงินได้นิติบุคคลแยกต่างหาก"};
+ if(result.payeeType!=="individual")return {label:"ต้องตรวจสอบ",note:"ยืนยันสถานะผู้รับเงินก่อน"};
+ if(result.type==="rent")return {label:"มาตรา 40(5)",note:"ค่าเช่าทรัพย์สินทั่วไป ต้องตรวจสอบรายละเอียดสัญญา"};
+ if(result.type==="contract")return {label:"อาจเป็นมาตรา 40(7) หรือ 40(8)",note:"40(7) สำหรับรับเหมาที่ผู้รับเหมาจัดหาสัมภาระสำคัญนอกจากเครื่องมือ กรณีอื่นอาจเข้า 40(8)"};
+ if(result.type==="service")return {label:"อาจเป็นมาตรา 40(2) หรือ 40(8)",note:"ขึ้นกับลักษณะการรับจ้างและการประกอบกิจการ ไม่ควรสรุปจากคำว่าบริการเพียงอย่างเดียว"};
+ if(["advertising","transport","goods","hotel","restaurant"].includes(result.type))return {label:"โดยทั่วไปมาตรา 40(8)",note:"การจำแนกเบื้องต้นสำหรับรายได้จากธุรกิจหรือพาณิชย์ ต้องตรวจสอบข้อเท็จจริง"};
+ return {label:"ยังระบุมาตรา 40 ไม่ได้",note:"ต้องตรวจสอบลักษณะรายได้และสัญญาเพิ่มเติม"};
+}
 function reviewChecklist(result){
  if(result.status!=="review")return "";
  const d=result;
@@ -73,10 +82,12 @@ function renderResult(result,container,save=false){
  const rate=result.rate===null?"—":`${result.rate}%`;
  const tax=result.tax===null? "ยังคำนวณไม่ได้":`฿${money(result.tax)}`;
  const net=result.net===null?"ยังคำนวณไม่ได้":`฿${money(result.net)}`;
+ const section40=assessSection40(result);
  const law=result.law?`<a href="${result.law.url}" target="_blank" rel="noopener">${escapeHTML(result.law.clause)} ↗</a>`:"ต้องตรวจสอบหลักเกณฑ์ทางกฎหมายเพิ่มเติม";
  container.innerHTML=`<article class="result-card"><div class="result-head"><div><h3>ผลการวิเคราะห์</h3><p>${escapeHTML(result.description||"รายการที่วิเคราะห์")} · ${escapeHTML(result.paymentDate||"")}</p></div><span class="pill ${statusClass}">${escapeHTML(result.statusText)}</span></div>
  <div class="result-grid">
  <div class="metric"><span>ประเภทเงินได้</span><strong>${escapeHTML(typeName(result.type))}</strong></div>
+ <div class="metric"><span>เงินได้พึงประเมินตามมาตรา 40</span><strong>${escapeHTML(section40.label)}</strong></div>
  <div class="metric"><span>ต้องหักภาษีหรือไม่</span><strong>${result.status==="ok"?"ต้องหัก":result.status==="no"?"ไม่หัก":"รอตรวจสอบ"}</strong></div>
  <div class="metric"><span>อัตราภาษี</span><strong>${rate}</strong></div>
  <div class="metric"><span>ฐานคำนวณภาษี</span><strong>฿${money(result.base)}</strong></div>
@@ -85,7 +96,7 @@ function renderResult(result,container,save=false){
  <div class="metric highlight"><span>ยอดเงินสุทธิที่ต้องจ่าย</span><strong>${net}</strong></div>
  <div class="metric"><span>แบบนำส่งภาษี</span><strong>${escapeHTML(result.form)}</strong></div>
  <div class="metric"><span>ยอดรวมก่อนหักภาษี</span><strong>฿${money(result.gross)}</strong></div></div>
- <div class="result-detail"><div class="detail-box"><h4>เหตุผลในการวิเคราะห์</h4><ul>${(result.reason||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul><p><b>แหล่งอ้างอิง:</b> ${law}</p></div><div class="detail-box"><h4>สูตรและข้อควรระวัง</h4><div class="formula">VAT = ฐานเงิน × VAT%<br>ภาษีหัก = ฐานเงินก่อน VAT × อัตราหัก<br>ยอดสุทธิ = ฐานเงิน + VAT − ภาษีหัก</div><ul>${(result.warnings||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul></div></div>
+ <div class="result-detail"><div class="detail-box"><h4>ประเภทเงินได้พึงประเมิน</h4><p><b>${escapeHTML(section40.label)}</b></p><p>${escapeHTML(section40.note)}</p></div><div class="detail-box"><h4>เหตุผลในการวิเคราะห์</h4><ul>${(result.reason||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul><p><b>แหล่งอ้างอิง:</b> ${law}</p></div><div class="detail-box"><h4>สูตรและข้อควรระวัง</h4><div class="formula">VAT = ฐานเงิน × VAT%<br>ภาษีหัก = ฐานเงินก่อน VAT × อัตราหัก<br>ยอดสุทธิ = ฐานเงิน + VAT − ภาษีหัก</div><ul>${(result.warnings||[]).map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul></div></div>
  ${reviewChecklist(result)}
  <p class="muted small">ผลลัพธ์นี้เป็นการประมวลผลตามข้อมูลที่ผู้ใช้กรอกและกฎที่ระบุในระบบต้นแบบเท่านั้น โปรดตรวจสอบกฎหมายฉบับปัจจุบันก่อนใช้งานจริง</p>
  ${save?'<div class="form-actions"><button class="btn btn-outline" id="saveResult">บันทึกผลในประวัติ</button></div>':""}</article>`;
@@ -105,7 +116,7 @@ $("taxForm").addEventListener("submit",e=>{e.preventDefault();const data=readFor
 $("taxForm").addEventListener("reset",()=>setTimeout(()=>{$("analysisResult").innerHTML="";$("customVatWrap").classList.add("hidden");$("paymentDate").value=new Date().toISOString().slice(0,10)},0));
 
 function renderDashboard(){const h=getHistory();$("statTotal").textContent=h.length;$("statConfirmed").textContent=h.filter(x=>x.status==="ok"||x.status==="no").length;$("statReview").textContent=h.filter(x=>x.status==="review").length;$("statTax").textContent="฿"+money(h.reduce((s,x)=>s+(x.tax||0),0));const recent=h.slice(0,5);$("recentList").innerHTML=recent.length?`<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>รายการ</th><th>สถานะ</th><th>ภาษี</th></tr></thead><tbody>${recent.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleDateString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ยังไม่มีประวัติการวิเคราะห์ เริ่มต้นได้จากเมนู “วิเคราะห์ภาษี”</div>';}
-function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> ${!window.sharedHistoryMode||x.ownerUid===window.sharedUserId?`<button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button>`:"—"}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
+function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>มาตรา 40</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(assessSection40(x).label)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> ${!window.sharedHistoryMode||x.ownerUid===window.sharedUserId?`<button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button>`:"—"}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
 $("historyTable").addEventListener("click",async e=>{
  const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");
  if(view){const item=getHistory().find(x=>String(x.id)===view.dataset.view);if(item){showPage("history");document.querySelectorAll("#page-history .result-area").forEach(x=>x.remove());const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}
