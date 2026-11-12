@@ -50,7 +50,7 @@
         </div></article>
         <article class="panel"><div class="panel-heading"><div><h3>ข้อควรทราบ</h3><p>ก่อนใช้ผลคำนวณ</p></div><span class="pill warning">สำคัญ</span></div><ul class="notice-list"><li>ผลลัพธ์เป็นเครื่องมือช่วยศึกษา ไม่ใช่คำวินิจฉัยทางภาษี</li><li>อัตราภาษีขึ้นกับประเภทเงินได้ สถานะผู้จ่าย/ผู้รับ และเงื่อนไขธุรกรรม</li><li>ระบบจะไม่คาดเดาเมื่อข้อมูลไม่ครบหรือไม่เข้าเงื่อนไขกฎที่บันทึกไว้</li></ul></article>
       </div>
-      <article class="panel"><div class="panel-heading"><div><h3>รายการล่าสุด</h3><p>ประวัติการวิเคราะห์ในอุปกรณ์นี้</p></div><button class="btn btn-outline btn-sm" data-go="history">ดูทั้งหมด</button></div><div id="recentList"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h3>รายการล่าสุด</h3><p>ประวัติการวิเคราะห์ร่วมกันจาก Firestore (เมื่อเชื่อมต่อสำเร็จ)</p></div><button class="btn btn-outline btn-sm" data-go="history">ดูทั้งหมด</button></div><div id="recentList"></div></article>
     </section>
 
     <section class="page" id="page-analyze">
@@ -80,7 +80,7 @@
     </section>
 
     <section class="page" id="page-history">
-      <div class="section-intro"><div><h2>ประวัติการคำนวณ</h2><p>ข้อมูลจัดเก็บใน LocalStorage ของ Browser ที่ใช้งาน</p></div><button class="btn btn-danger-outline btn-sm" id="clearHistory">ลบประวัติทั้งหมด</button></div>
+      <div class="section-intro"><div><h2>ประวัติการคำนวณ</h2><p>เมื่อเชื่อม Firebase ผู้ใช้ที่ลงชื่อเข้าใช้จะเห็นประวัติร่วมกัน 200 รายการล่าสุด และลบได้เฉพาะรายการของตัวเอง</p></div><button class="btn btn-danger-outline btn-sm" id="clearHistory">ลบประวัติในเครื่อง</button></div>
       <article class="panel"><div id="historyTable"></div></article>
     </section>
 

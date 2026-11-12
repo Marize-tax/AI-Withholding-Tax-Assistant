@@ -1,9 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
+  match /sharedTaxHistory/{recordId} {
+   // Anyone authenticated anonymously may read shared history.
+   allow read: if request.auth != null;
+   // New records must be owned by the authenticated user.
+   allow create: if request.auth != null
+     && request.resource.data.ownerUid == request.auth.uid
+     && request.resource.data.keys().hasAll(['ownerUid','createdAt','description','status','type'])
+     && request.resource.data.description is string
+     && request.resource.data.description.size() <= 1000
+     && request.resource.data.createdAt is string
+     && request.resource.data.createdAt.size() <= 40
+     && request.resource.data.keys().hasOnly([
+       'ownerUid','createdAt','createdOnServer','payerType','payeeType','residence',
+       'description','type','amount','vatRate','paymentDate','vat','gross','tax',
+       'rate','base','net','form','status','statusText','reason','warnings','law'
+     ]);
+   allow update: if false;
+   allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+  }
+  // Old per-user data stays private, if any.
   match /users/{userId}/data/{documentId} {
-   allow read, write: if request.auth != null && request.auth.uid == userId
-     && documentId == 'history';
+   allow read, write: if request.auth != null && request.auth.uid == userId && documentId == 'history';
   }
  }
 }

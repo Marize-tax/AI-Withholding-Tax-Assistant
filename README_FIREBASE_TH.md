@@ -1,16 +1,26 @@
-# วิธีเชื่อม Firebase
+# AI Withholding Tax Assistant — Shared Firestore
 
-1. เปิด https://console.firebase.google.com/ แล้วสร้างโปรเจกต์
-2. Project overview > Add app > Web (ไอคอน </>) > Register app แล้วคัดลอก firebaseConfig
-3. เปิดไฟล์ `firebase-config.js` และแทนที่ค่าตัวอย่างด้วยค่าจริงจาก Firebase Console
-4. Build > Authentication > Sign-in method > Anonymous > Enable
-5. Build > Firestore Database > Create database (เลือก region และเริ่มแบบ production)
-6. Firestore Database > Rules นำเนื้อหาจาก `firestore.rules` ไปวาง แล้วกด Publish
-7. อัปโหลดทุกไฟล์ใน ZIP ขึ้น GitHub Pages หรือ Firebase Hosting (ต้องใช้เว็บผ่าน http/https ไม่ใช่เปิด index.html ด้วย file:// เพราะ ES modules)
-8. เปิดเว็บไซต์แล้วตรวจแถบสถานะด้านล่างซ้าย จากนั้นลองบันทึกประวัติ แล้วดู Firestore > Data > users > {uid} > data > history
+## ติดตั้ง
+1. Firebase Console > Project settings > Your apps > Web: คัดลอกค่า firebaseConfig ไปใส่ `firebase-config.js` (ห้ามใส่ service account key)
+2. Firebase Console > Authentication > Sign-in method > Anonymous > Enable
+3. Firestore Database > Create database (production mode) > Rules: วางเนื้อหา `firestore.rules` แล้วกด Publish
+4. อัปโหลดไฟล์ทั้งหมดใน ZIP ไป GitHub Pages โดยคงชื่อไฟล์เดิมและอยู่โฟลเดอร์เดียวกัน
+5. เปิดเว็บไซต์จาก HTTPS บนอุปกรณ์สองเครื่อง แล้วบันทึกข้อมูลตัวอย่างในเครื่องแรก ตรวจว่าอีกเครื่องเห็นรายการในหน้า ประวัติการคำนวณ
 
-**ข้อจำกัด:** Anonymous Authentication ให้ UID แยกตามเบราว์เซอร์ ไม่ใช่ระบบบัญชีล็อกอินข้ามอุปกรณ์ หากล้างข้อมูลเว็บไซต์หรือเปลี่ยนเครื่องอาจเข้าถึงข้อมูลเดิมไม่ได้ ต้องเพิ่ม Google Sign-In หากต้องการใช้งานหลายอุปกรณ์
+## รูปแบบข้อมูลและสิทธิ์
+- Collection กลาง: `sharedTaxHistory` แยกเอกสารต่อรายการ; อ่านได้เฉพาะผู้ที่ Authentication สำเร็จ (รวม Anonymous)
+- สร้างรายการ: ผู้ใช้ที่ล็อกอิน; ลบรายการ: เฉพาะเจ้าของ UID; แก้ไขรายการ: ปิด
+- แสดง 200 รายการล่าสุดแบบเรียลไทม์ (ไม่ได้แสดงประวัติทั้งหมดถ้ามีเกิน 200 รายการ)
+- ข้อมูลเก่าที่เคยเก็บใน `users/{uid}/data/history` หรือ LocalStorage ไม่ถูกนำมาเผยแพร่โดยอัตโนมัติ
+- ชื่อผู้จ่าย ชื่อผู้รับ และช่องหมายเหตุพิเศษถูกตัดออกก่อนอัปโหลด แต่รายละเอียดธุรกรรม (description) และเหตุผล (reason) ยังมองเห็นได้โดยทุกคนที่เข้าสู่ระบบ Anonymous
+- **อย่ากรอกข้อมูลส่วนบุคคล ข้อมูลลูกค้า เลขประจำตัวผู้เสียภาษี หรือข้อมูลธุรกิจลับ** ในเวอร์ชันแชร์นี้
+- Anonymous Authentication ไม่ยืนยันตัวตนจริง: ใครก็ตามที่เปิดเว็บไซต์สามารถได้ UID ใหม่และอ่านข้อมูลที่แชร์ได้ จึงเหมาะสำหรับข้อมูลทดสอบเท่านั้น
+- ไม่ควรใช้ข้อมูลภาษีจริงจนกว่าจะเพิ่มระบบบัญชีผู้ใช้ การกำหนดสิทธิ์และมาตรการ PDPA
+- ปุ่มลบทั้งหมดถูกปิดการทำงานในโหมดส่วนกลางเพื่อป้องกันลบของคนอื่น
 
-**ความปลอดภัย:** ห้ามใช้ Firestore rules แบบ `allow read, write: if true;` และห้ามเก็บข้อมูลผู้เสียภาษีจริงในต้นแบบก่อนออกแบบระบบสิทธิ์ การยินยอม และการรักษาความปลอดภัยที่เหมาะสม
-
-**ข้อควรทราบ:** การเก็บประวัติในตัวอย่างใช้เอกสาร Firestore เดียวเพื่อให้เริ่มง่าย เหมาะกับข้อมูลทดลองจำนวนน้อย หากใช้จริงควรแยกเป็น 1 เอกสารต่อรายการ และใช้ pagination
+## ทดสอบและแก้ปัญหา
+- ดูข้อความสถานะ Firebase ที่ด้านล่างเว็บไซต์
+- หากอ่านไม่ได้ ตรวจ Rules, Anonymous Auth, firebaseConfig และ Console (F12)
+- เปิดผ่าน HTTPS ไม่ใช่ file://
+- อย่าลืม Publish Rules และอัปโหลดไฟล์ firebase.js / firebase-config.js
+- หากใช้ GitHub Pages อาจต้องรอ deploy สำเร็จและกด Ctrl+F5

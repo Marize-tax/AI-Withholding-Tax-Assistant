@@ -1,4 +1,7 @@
-const STORAGE_KEY = "aiWhtHistoryV1";
+const STORAGE_KEY = "aiWhtSharedCacheV1";
+// Shared records are loaded from Firestore; old private history is intentionally NOT uploaded.
+window.sharedHistoryMode = false;
+window.sharedUserId = null;
 const LAW = {
   rent:{rate:5,clause:"ท.ป.4/2528 ข้อ 6",url:"https://www.rd.go.th/3479.html",why:"ค่าเช่าทรัพย์สินตามหลักเกณฑ์ข้อ 6"},
   contract:{rate:3,clause:"ท.ป.4/2528 ข้อ 8",url:"https://www.rd.go.th/3479.html",why:"ค่าจ้างทำของที่เข้าเงื่อนไขตามข้อ 8"},
@@ -10,6 +13,7 @@ const $ = id => document.getElementById(id);
 const money = n => new Intl.NumberFormat("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
 const getHistory = () => {try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return []}};
 const saveHistory = list => localStorage.setItem(STORAGE_KEY,JSON.stringify(list));
+window.setSharedHistory = list => {saveHistory(list);window.refreshTaxViews?.();};
 function toast(message){const el=$("toast");el.textContent=message;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600)}
 function showPage(name){
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${name}`));
@@ -85,7 +89,14 @@ function renderResult(result,container,save=false){
  ${reviewChecklist(result)}
  <p class="muted small">ผลลัพธ์นี้เป็นการประมวลผลตามข้อมูลที่ผู้ใช้กรอกและกฎที่ระบุในระบบต้นแบบเท่านั้น โปรดตรวจสอบกฎหมายฉบับปัจจุบันก่อนใช้งานจริง</p>
  ${save?'<div class="form-actions"><button class="btn btn-outline" id="saveResult">บันทึกผลในประวัติ</button></div>':""}</article>`;
- if(save){$("saveResult").addEventListener("click",()=>{const h=getHistory();h.unshift({...result,id:Date.now(),createdAt:new Date().toISOString()});saveHistory(h);window.firebaseHistorySync?.(h);toast("บันทึกผลการวิเคราะห์แล้ว");renderDashboard();$("saveResult").disabled=true;$("saveResult").textContent="บันทึกแล้ว";});}
+ if(save){$("saveResult").addEventListener("click",async()=>{
+  const btn=$("saveResult");btn.disabled=true;
+  const record={...result,id:crypto.randomUUID(),createdAt:new Date().toISOString()};
+  if(window.sharedHistoryMode){
+    try{await window.firebaseAddShared(record);toast("บันทึกลงประวัติส่วนกลางแล้ว");btn.textContent="บันทึกแล้ว";}
+    catch(e){console.error(e);toast("บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");btn.disabled=false;}
+  }else{const h=getHistory();h.unshift(record);saveHistory(h);toast("บันทึกในเครื่อง (ยังไม่เชื่อม Firebase)");renderDashboard();btn.textContent="บันทึกแล้ว";}
+ });}
 }
 function typeName(t){return ({rent:"ค่าเช่า",service:"ค่าบริการ",contract:"ค่าจ้างทำของ",advertising:"ค่าโฆษณา",transport:"ค่าขนส่ง",goods:"การซื้อสินค้า",hotel:"ค่าบริการโรงแรม",restaurant:"ค่าภัตตาคาร",other:"รายการอื่น",unknown:"ต้องตรวจสอบเพิ่มเติม"})[t]||"ไม่ระบุ";}
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -94,9 +105,19 @@ $("taxForm").addEventListener("submit",e=>{e.preventDefault();const data=readFor
 $("taxForm").addEventListener("reset",()=>setTimeout(()=>{$("analysisResult").innerHTML="";$("customVatWrap").classList.add("hidden");$("paymentDate").value=new Date().toISOString().slice(0,10)},0));
 
 function renderDashboard(){const h=getHistory();$("statTotal").textContent=h.length;$("statConfirmed").textContent=h.filter(x=>x.status==="ok"||x.status==="no").length;$("statReview").textContent=h.filter(x=>x.status==="review").length;$("statTax").textContent="฿"+money(h.reduce((s,x)=>s+(x.tax||0),0));const recent=h.slice(0,5);$("recentList").innerHTML=recent.length?`<div class="table-wrap"><table><thead><tr><th>วันที่</th><th>รายการ</th><th>สถานะ</th><th>ภาษี</th></tr></thead><tbody>${recent.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleDateString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ยังไม่มีประวัติการวิเคราะห์ เริ่มต้นได้จากเมนู “วิเคราะห์ภาษี”</div>';}
-function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> <button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
-$("historyTable").addEventListener("click",e=>{const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");if(view){const item=getHistory().find(x=>x.id===Number(view.dataset.view));if(item){showPage("history");const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}if(del){saveHistory(getHistory().filter(x=>x.id!==Number(del.dataset.delete)));window.firebaseHistorySync?.(getHistory());renderHistory();renderDashboard();toast("ลบรายการแล้ว");}});
-$("clearHistory").addEventListener("click",()=>{if(confirm("ต้องการลบประวัติการคำนวณทั้งหมดหรือไม่?")){saveHistory([]);window.firebaseHistorySync?.([]);renderHistory();renderDashboard();toast("ลบประวัติทั้งหมดแล้ว");}});
+function renderHistory(){const h=getHistory();$("historyTable").innerHTML=h.length?`<div class="table-wrap"><table><thead><tr><th>วันที่บันทึก</th><th>รายละเอียด</th><th>ประเภท</th><th>สถานะ</th><th>ภาษี</th><th>จัดการ</th></tr></thead><tbody>${h.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString("th-TH")}</td><td>${escapeHTML(x.description)}</td><td>${typeName(x.type)}</td><td>${escapeHTML(x.statusText)}</td><td>${x.tax===null?"—":"฿"+money(x.tax)}</td><td><button class="btn btn-outline btn-sm" data-view="${x.id}">ดู</button> ${!window.sharedHistoryMode||x.ownerUid===window.sharedUserId?`<button class="btn btn-danger-outline btn-sm" data-delete="${x.id}">ลบ</button>`:"—"}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty-state">ไม่มีประวัติการคำนวณ</div>';}
+$("historyTable").addEventListener("click",async e=>{
+ const view=e.target.closest("[data-view]"),del=e.target.closest("[data-delete]");
+ if(view){const item=getHistory().find(x=>String(x.id)===view.dataset.view);if(item){showPage("history");document.querySelectorAll("#page-history .result-area").forEach(x=>x.remove());const box=document.createElement("div");box.className="result-area";$("historyTable").after(box);renderResult(item,box,false);box.scrollIntoView({behavior:"smooth"});}}
+ if(del){const item=getHistory().find(x=>String(x.id)===del.dataset.delete);if(!item)return;
+  if(window.sharedHistoryMode){if(item.ownerUid!==window.sharedUserId)return toast("ลบได้เฉพาะรายการของตัวเอง");try{await window.firebaseDeleteShared(item.id);toast("ลบรายการแล้ว");}catch(err){console.error(err);toast("ลบไม่สำเร็จ");}}
+  else{saveHistory(getHistory().filter(x=>String(x.id)!==del.dataset.delete));renderHistory();renderDashboard();toast("ลบรายการแล้ว");}
+ }
+});
+$("clearHistory").addEventListener("click",async()=>{
+ if(window.sharedHistoryMode){toast("ระบบส่วนกลางไม่อนุญาตให้ลบประวัติของทุกคนพร้อมกัน");return;}
+ if(confirm("ต้องการลบประวัติในเครื่องทั้งหมดหรือไม่?")){saveHistory([]);renderHistory();renderDashboard();toast("ลบประวัติในเครื่องแล้ว");}
+});
 renderDashboard();
 
 window.refreshTaxViews=()=>{renderDashboard();renderHistory();};
