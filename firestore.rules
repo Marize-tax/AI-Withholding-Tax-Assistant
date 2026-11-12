@@ -15,7 +15,8 @@ service cloud.firestore {
      && request.resource.data.keys().hasOnly([
        'ownerUid','createdAt','createdOnServer','payerType','payeeType','residence',
        'description','type','amount','vatRate','paymentDate','vat','gross','tax',
-       'rate','base','net','form','status','statusText','reason','warnings','law'
+       'rate','base','net','form','status','statusText','reason','warnings','law',
+       'billMode','serviceAmount'
      ]);
    allow update: if false;
    allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;

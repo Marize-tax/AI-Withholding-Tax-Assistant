@@ -1,7 +1,15 @@
 import {firebaseConfig} from "./firebase-config.js";
 const status=document.getElementById("firebaseStatus");
 const setStatus=t=>{if(status)status.textContent="การจัดเก็บ: "+t;};
-const configured=firebaseConfig.apiKey && firebaseConfig.apiKey!=="YOUR_API_KEY" && firebaseConfig.projectId!=="YOUR_PROJECT_ID";
+const configured=typeof firebaseConfig.apiKey === "string" && /^AIza[\w-]{30,}$/.test(firebaseConfig.apiKey.trim()) && firebaseConfig.projectId && firebaseConfig.appId && firebaseConfig.authDomain;
+const explainError=error=>{
+ const code=error?.code||"unknown";
+ if(code==="auth/invalid-api-key"||code==="auth/api-key-not-valid")return "API Key ไม่ถูกต้องหรือถูกจำกัด — ตรวจ Google Cloud Credentials ("+code+")";
+ if(code==="auth/operation-not-allowed")return "ยังไม่ได้เปิด Anonymous Authentication";
+ if(code==="auth/network-request-failed")return "เชื่อมต่อบริการยืนยันตัวตนไม่ได้ — ตรวจ Network / ตัวบล็อก";
+ if(code==="permission-denied"||code==="firestore/permission-denied")return "Firestore ปฏิเสธสิทธิ์ — ตรวจ Rules และข้อมูลที่บันทึก";
+ return "เชื่อมต่อ Firebase ไม่สำเร็จ ("+code+")";
+};
 if(!configured){setStatus("ในเครื่อง — กรุณาตั้งค่า firebase-config.js");}
 else{
  try{
@@ -23,7 +31,7 @@ else{
     window.sharedHistoryMode=true;
     window.setSharedHistory(items);
     setStatus("Cloud Firestore — ประวัติร่วมกัน ("+items.length+" รายการล่าสุด)");
-   },error=>{console.error(error);window.sharedHistoryMode=false;setStatus("อ่านข้อมูลส่วนกลางไม่สำเร็จ — ตรวจ Rules / Index");});
+   },error=>{console.error(error);window.sharedHistoryMode=false;setStatus(explainError(error));});
    window.firebaseAddShared=async record=>{
     const {id,ownerUid,createdAt,...rest}=record;
     // Avoid publishing counterparty names and free-form special notes in the shared database.
@@ -32,6 +40,6 @@ else{
    };
    window.firebaseDeleteShared=async id=>deleteDoc(doc(db,"sharedTaxHistory",String(id)));
   });
-  await signInAnonymously(auth);
- }catch(error){console.error(error);setStatus("เชื่อมต่อ Firebase ไม่สำเร็จ — ใช้ในเครื่อง");}
+  if(!auth.currentUser) await signInAnonymously(auth);
+ }catch(error){console.error(error);setStatus(explainError(error)+" — ใช้ในเครื่อง");}
 }
