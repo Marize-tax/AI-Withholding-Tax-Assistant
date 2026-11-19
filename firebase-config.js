@@ -1,8 +1,10 @@
+// วางค่าจาก Firebase Console > Project settings > Your apps > SDK setup and configuration
+// ห้ามใส่ service account private key ในไฟล์นี้
 export const firebaseConfig = {
-  apiKey: "AIzaSyAvx1wRH-VGXLGZrdjvjga-XEHK77e5GI4",
-  authDomain: "ninx-75a1e.firebaseapp.com",
-  projectId: "ninx-75a1e",
-  storageBucket: "ninx-75a1e.firebasestorage.app",
-  messagingSenderId: "85587643663",
-  appId: "1:85587643663:web:b78f899438abc1332ac27a"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };

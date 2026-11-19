@@ -39,6 +39,7 @@ function analyze(data){
  if(!data.payerName||!data.payeeName||!data.description||!data.paymentDate||!data.payerType||!data.payeeType||!data.residence||!data.type||!(data.amount>0)||data.vatRate<0||data.vatRate>100)return fail("ข้อมูลจำเป็นไม่ครบหรือจำนวนเงินไม่ถูกต้อง",["กรุณากรอกข้อมูลทุกช่องที่จำเป็นก่อนวิเคราะห์"]);
  if(data.residence!=="thai")return fail("ถิ่นที่อยู่หรือสถานะการประกอบกิจการของผู้รับเงินไม่เข้าเงื่อนไขที่ระบบต้นแบบรองรับ",["กรณีผู้รับเงินต่างประเทศหรือไม่ทราบถิ่นที่อยู่ อาจมีประเด็นภาษีระหว่างประเทศและ ภ.ง.ด.54 ต้องให้ผู้เชี่ยวชาญตรวจสอบ"]);
  if(data.payerType!=="juristic")return fail("ผู้จ่ายเงินไม่ใช่บริษัท/นิติบุคคลตามขอบเขตกฎอัตโนมัติที่ระบบบันทึกไว้",["การหักภาษีของผู้จ่ายประเภทอื่นอาจใช้บทบัญญัติหรือหลักเกณฑ์ต่างกัน"]);
+ if(data.payeeType==="unknown")return fail("ยังไม่ทราบสถานะผู้รับเงิน จึงไม่สามารถระบุอัตราภาษีหัก ณ ที่จ่ายได้",["ตรวจสอบว่าผู้รับเงินเป็นบุคคลธรรมดาหรือนิติบุคคล", "ตรวจสอบถิ่นที่อยู่และเอกสารผู้รับเงินก่อนคำนวณ"]);
  if(data.payeeType==="foundation")return fail("ผู้รับเป็นมูลนิธิ/สมาคม ซึ่งอาจมีอัตราและข้อยกเว้นเฉพาะ",["ต้องตรวจสอบสถานะและลักษณะการประกอบกิจการของมูลนิธิ/สมาคม"]);
  if(data.payeeType==="foreign")return fail("ผู้รับเป็นนิติบุคคลต่างประเทศ ต้องพิจารณาสถานประกอบการถาวรและอนุสัญญาภาษีซ้อน",["อย่านำอัตราสำหรับผู้มีถิ่นที่อยู่ในไทยมาใช้"]);
  if(data.type==="unknown"||data.type==="other")return fail("รายละเอียดไม่เพียงพอที่จะจำแนกประเภทเงินได้ตามกฎหมาย",["ต้องทราบลักษณะงาน สัญญา และสิ่งตอบแทนที่แท้จริง"]);
@@ -57,7 +58,7 @@ function analyze(data){
  }
  const rule=LAW[data.type];
  if(!rule)return fail("ไม่พบกฎที่ยืนยันได้สำหรับประเภทธุรกรรมนี้");
- if(data.type==="transport")return fail("ค่าขนส่งต้องแยกจากค่าโดยสารขนส่งสาธารณะและตรวจสอบผู้ให้บริการก่อน",["หากเป็นค่าโดยสารขนส่งสาธารณะ อาจได้รับยกเว้นตามหลักเกณฑ์","หากเป็นค่าขนส่งสินค้า ข้อ 12/4 ระบุอัตรา 1% ภายใต้เงื่อนไขที่กำหนด"],);
+ if(data.type==="transport")return fail("ค่าขนส่งสินค้าต้องแยกจากค่าโดยสารขนส่งสาธารณะและตรวจสอบผู้ให้บริการก่อน",["หากเป็นค่าโดยสารขนส่งสาธารณะ อาจได้รับยกเว้นตามหลักเกณฑ์","หากเป็นค่าขนส่งสินค้า ข้อ 12/4 ระบุอัตรา 1% ภายใต้เงื่อนไขที่กำหนด"],);
  if(data.amount<1000)return fail("ยอดตามสัญญาอาจต่ำกว่าเกณฑ์ขั้นต่ำที่กำหนดในข้อ 12/7",["ระบบไม่ตัดสินข้อยกเว้นนี้โดยอัตโนมัติ เพราะต้องพิจารณายอดตามสัญญารายหนึ่ง ๆ ไม่ใช่เฉพาะยอดจ่ายครั้งนี้"]);
  if(data.type==="rent"&&data.special.toLowerCase().includes("อาคารหรือโรงเรือนที่ได้รับกรรมสิทธิ์"))return fail("ลักษณะค่าเช่าที่ระบุอาจเข้าข้อยกเว้นเฉพาะตามข้อ 6",["ต้องตรวจสอบรายละเอียดกรรมสิทธิ์และสัญญา"]);
  if(data.type==="service"&&/โรงแรม|ภัตตาคาร|ร้านอาหาร/.test(data.description))return fail("บริการที่ระบุอาจเป็นบริการโรงแรมหรือภัตตาคารซึ่งมีข้อยกเว้นเฉพาะ",["โปรดเลือกประเภทค่าบริการโรงแรม/ภัตตาคาร หากตรงกับธุรกรรมจริง"]);
@@ -81,7 +82,7 @@ function reviewChecklist(result){
  if(d.payerType!=="juristic")items.push("ตรวจสอบประเภทและหน้าที่หักภาษีของผู้จ่ายเงิน");
  if(d.payeeType==="foundation")items.push("ตรวจสอบหนังสือรับรองและสถานะภาษีของมูลนิธิ/สมาคม");
  if(d.type==="other"||d.type==="unknown")items.push("ระบุรายละเอียดบริการ ผลงาน สัญญา และการคิดค่าตอบแทนให้ชัดเจน");
- if(d.type==="transport")items.push("ระบุว่าเป็นค่าขนส่งสินค้าหรือค่าโดยสารสาธารณะ และใครเป็นผู้ให้บริการ");
+ if(d.type==="transport")items.push("ยืนยันว่าเป็นค่าขนส่งสินค้า ไม่ใช่ค่าโดยสารสาธารณะ และตรวจสอบผู้ให้บริการ");
  if(d.amount<1000)items.push("ตรวจสอบยอดรวมตามสัญญา ไม่ใช่เฉพาะยอดจ่ายครั้งเดียว");
  if(d.type==="service")items.push("ยืนยันว่าไม่ใช่บริการโรงแรม ภัตตาคาร หรือบริการที่มีกฎเฉพาะ");
  return `<section class="review-checklist"><h4>ข้อมูลที่ต้องตรวจสอบเพิ่มเติม</h4><p>ระบบยังไม่สรุปอัตราภาษี เพราะมีเงื่อนไขที่ต้องยืนยันก่อน โปรดตรวจสอบรายการต่อไปนี้</p><ul>${items.map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul><p><b>ขั้นตอนถัดไป:</b> ตรวจเอกสารและแก้ไขข้อมูลในแบบฟอร์มให้ตรงกับข้อเท็จจริง หากยังไม่แน่ใจให้สอบถามผู้เชี่ยวชาญหรือกรมสรรพากร 1161</p></section>`;
@@ -115,11 +116,11 @@ function renderResult(result,container,save=false){
   const record={...result,id:crypto.randomUUID(),createdAt:new Date().toISOString()};
   if(window.sharedHistoryMode){
     try{await window.firebaseAddShared(record);toast("บันทึกลงประวัติส่วนกลางแล้ว");btn.textContent="บันทึกแล้ว";}
-    catch(e){console.error(e);toast("บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");btn.disabled=false;}
-  }else{const h=getHistory();h.unshift(record);saveHistory(h);toast("บันทึกในเครื่อง (ยังไม่เชื่อม Firebase)");renderDashboard();btn.textContent="บันทึกแล้ว";}
+    catch(e){console.error(e);toast("Firestore ปฏิเสธการบันทึก: "+(e.code||"ตรวจสอบ Rules"));btn.disabled=false;}
+  }else{const h=getHistory();h.unshift(record);saveHistory(h);toast("บันทึกเฉพาะเครื่องนี้ — ยังไม่เชื่อม Firestore จึงไม่แชร์ให้ผู้อื่น");renderDashboard();btn.textContent="บันทึกแล้ว";}
  });}
 }
-function typeName(t){return ({rent:"ค่าเช่า",service:"ค่าบริการ",contract:"ค่าจ้างทำของ",advertising:"ค่าโฆษณา",transport:"ค่าขนส่ง",goods:"การซื้อสินค้า",hotel:"ค่าบริการโรงแรม",restaurant:"ค่าภัตตาคาร",other:"รายการอื่น",unknown:"ต้องตรวจสอบเพิ่มเติม"})[t]||"ไม่ระบุ";}
+function typeName(t){return ({rent:"ค่าเช่า",service:"ค่าบริการ",contract:"ค่าจ้างทำของ",advertising:"ค่าโฆษณา",transport:"ค่าขนส่งสินค้า",goods:"การซื้อสินค้า",hotel:"ค่าบริการโรงแรม",restaurant:"ค่าภัตตาคาร",other:"รายการอื่น",unknown:"ต้องตรวจสอบเพิ่มเติม"})[t]||"ไม่ระบุ";}
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function readForm(){const vatRate=$("vatRate").value==="custom"?Number($("customVat").value):Number($("vatRate").value);return {payerName:$("payerName").value.trim(),payerType:$("payerType").value,payeeName:$("payeeName").value.trim(),payeeType:$("payeeType").value,residence:$("residence").value,description:$("description").value.trim(),type:$("incomeType").value,amount:Number($("amount").value),vatRate,paymentDate:$("paymentDate").value,special:$("special").value.trim(),billMode:$("incomeType").value==="goods"?$("billMode").value:"none",serviceAmount:$("incomeType").value==="goods"&&$("billMode").value==="separate"?Number($("serviceAmount").value):0};}
 $("taxForm").addEventListener("submit",e=>{e.preventDefault();const data=readForm();const required=["payerName","payerType","payeeName","payeeType","residence","description","incomeType","amount","paymentDate"];const missing=required.filter(id=>!$(id).value);if(missing.length||!(data.amount>0)||data.vatRate<0||data.vatRate>100||data.serviceAmount<0){$("analysisResult").innerHTML='<div class="result-card"><span class="pill status-review">ข้อมูลไม่ครบ</span><p>กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน และตรวจสอบจำนวนเงิน / อัตรา VAT ก่อนวิเคราะห์</p></div>';return;}const result=analyze(data);renderResult(result,$("analysisResult"),true);$("analysisResult").scrollIntoView({behavior:"smooth",block:"start"});});
